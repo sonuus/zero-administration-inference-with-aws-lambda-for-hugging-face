@@ -33,7 +33,8 @@ class ServerlessHuggingFaceStack(cdk.Stack):
 
         # %%
         # iterates through the Python files in the docker directory
-        docker_folder = os.path.dirname(os.path.realpath(__file__)) + "/inference"
+        docker_folder = os.path.dirname(
+            os.path.realpath(__file__)) + "/inference"
         pathlist = Path(docker_folder).rglob('*.py')
         for path in pathlist:
             base = os.path.basename(path)
@@ -54,6 +55,9 @@ class ServerlessHuggingFaceStack(cdk.Stack):
                     "TRANSFORMERS_CACHE": "/mnt/hf_models_cache"},
             )
 
+            function.current_version.add_alias(
+                "live", provisioned_concurrent_executions=2)
+
             # adds method for the function
             lambda_integration = api_gw.LambdaIntegration(function, proxy=False, integration_responses=[
                 api_gw.IntegrationResponse(status_code='200',
@@ -61,6 +65,7 @@ class ServerlessHuggingFaceStack(cdk.Stack):
                                                'method.response.header.Access-Control-Allow-Origin': "'*'"
                                            })
             ])
+
 
 app = cdk.App()
 
