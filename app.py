@@ -10,7 +10,8 @@ from aws_cdk import (
     aws_apigateway as api_gw,
     aws_efs as efs,
     aws_ec2 as ec2,
-    core as cdk
+    core as cdk,
+    aws_autoscaling as autoscaling
 )
 
 
@@ -30,6 +31,15 @@ class ServerlessHuggingFaceStack(cdk.Stack):
                                                owner_gid='1001', owner_uid='1001', permissions='750'),
                                            path="/export/models",
                                            posix_user=efs.PosixUser(gid="1001", uid="1001"))
+
+        base_api = api_gw.RestApi(self, 'ApiGatewayWithCors',
+                                  rest_api_name='ApiGatewayWithCors')
+        example_entity = base_api.root.add_resource(
+            'example',
+            default_cors_preflight_options=api_gw.CorsOptions(
+                allow_methods=['GET', 'OPTIONS', 'POST'],
+                allow_origins=api_gw.Cors.ALL_ORIGINS)
+        )
 
         # %%
         # iterates through the Python files in the docker directory
@@ -55,16 +65,47 @@ class ServerlessHuggingFaceStack(cdk.Stack):
                     "TRANSFORMERS_CACHE": "/mnt/hf_models_cache"},
             )
 
-            function.current_version.add_alias(
-                "live", provisioned_concurrent_executions=2)
+            # function.current_version.add_alias(
+            #     "live", provisioned_concurrent_executions=2)
+            # version = function.add_version("1", "", f"integ-test")
+
+            alais = lambda_.Alias(self, "Alias", provisioned_concurrent_executions=2,
+                                    alias_name='live', version=function.current_version)
+            as_ = alais.add_auto_scaling(max_capacity=5)
+            as_.scale_on_utilization(utilization_target=0.5)
+            # as_.scale_on_schedule("ScaleUpInTheMorning", schedule=autoscaling.Schedule.cron(
+            #     hour="8", minute="0"), min_capacity=2)
+
+            example_entity_lambda_integration = api_gw.LambdaIntegration(
+                alais,
+                proxy=False,
+                integration_responses=[{
+                            'statusCode': '200',
+                            'responseParameters': {
+                                'method.response.header.Access-Control-Allow-Origin': "'*'",
+                            }
+                        }]
+                    )
+
+            example_entity.add_method(
+                'ANY', example_entity_lambda_integration,
+                method_responses=[{
+                    'statusCode': '200',
+                    'responseParameters': {
+                        'method.response.header.Access-Control-Allow-Origin': True,
+                    }
+                }]
+            )
 
             # adds method for the function
-            lambda_integration = api_gw.LambdaIntegration(function, proxy=False, integration_responses=[
-                api_gw.IntegrationResponse(status_code='200',
-                                           response_parameters={
-                                               'method.response.header.Access-Control-Allow-Origin': "'*'"
-                                           })
-            ])
+            # lambda_integration = api_gw.LambdaIntegration(function, proxy=False, integration_responses=[
+            #     api_gw.IntegrationResponse(status_code='200',
+            #                                response_parameters={
+            #                                    'method.response.header.Access-Control-Allow-Origin': "'*'"
+            #                                })
+            # ])
+
+            break
 
 
 app = cdk.App()
