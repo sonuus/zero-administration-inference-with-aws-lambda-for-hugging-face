@@ -10,7 +10,8 @@ from aws_cdk import (
     aws_apigateway as api_gw,
     aws_efs as efs,
     aws_ec2 as ec2,
-    core as cdk
+    core as cdk,
+    aws_autoscaling as autoscaling
 )
 
 
@@ -36,6 +37,7 @@ class ServerlessHuggingFaceStack(cdk.Stack):
         docker_folder = os.path.dirname(
             os.path.realpath(__file__)) + "/inference"
         pathlist = Path(docker_folder).rglob('*.py')
+        counter=1
         for path in pathlist:
             base = os.path.basename(path)
             filename = os.path.splitext(base)[0]
@@ -54,9 +56,14 @@ class ServerlessHuggingFaceStack(cdk.Stack):
                 environment={
                     "TRANSFORMERS_CACHE": "/mnt/hf_models_cache"}
             )
-
-            function.current_version.add_alias(
-                "live", provisioned_concurrent_executions=2)
+            
+            lambda_.Alias(self, f"Alias{counter}",
+                     alias_name="prod",
+                     version=function.latest_version,
+                     provisioned_concurrent_executions=2
+                    )
+            
+           
 
             # adds method for the function
             lambda_integration = api_gw.LambdaIntegration(function, proxy=False, integration_responses=[
@@ -65,7 +72,8 @@ class ServerlessHuggingFaceStack(cdk.Stack):
                                                'method.response.header.Access-Control-Allow-Origin': "'*'"
                                            })
             ])
-
+            
+            counter=counter +1 
 
 app = cdk.App()
 
