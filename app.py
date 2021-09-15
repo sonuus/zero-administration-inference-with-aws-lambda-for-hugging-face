@@ -51,9 +51,11 @@ class ServerlessHuggingFaceStack(cdk.Stack):
                 filesystem=lambda_.FileSystem.from_efs_access_point(
                     access_point, '/mnt/hf_models_cache'),
                 environment={
-                    "TRANSFORMERS_CACHE": "/mnt/hf_models_cache"},
+                    "TRANSFORMERS_CACHE": "/mnt/hf_models_cache"}
             )
-
+            
+            function.addVersion('CDKVersion1',undefined, 'demoAlias',10)
+            
             # adds method for the function
             lambda_integration = api_gw.LambdaIntegration(function, proxy=False, integration_responses=[
                 api_gw.IntegrationResponse(status_code='200',
