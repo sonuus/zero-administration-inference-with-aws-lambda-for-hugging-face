@@ -65,7 +65,6 @@ class ServerlessHuggingFaceStack(cdk.Stack):
                 environment={
                     "TRANSFORMERS_CACHE": "/mnt/hf_models_cache"}
             )
-<<<<<<< HEAD
 
             # function.current_version.add_alias(
             #     "live", provisioned_concurrent_executions=2)
@@ -109,26 +108,6 @@ class ServerlessHuggingFaceStack(cdk.Stack):
 
             break
 
-=======
-            
-            lambda_.Alias(self, f"Alias{counter}",
-                     alias_name="prod",
-                     version=function.latest_version,
-                     provisioned_concurrent_executions=2
-                    )
-            
-           
-
-            # adds method for the function
-            lambda_integration = api_gw.LambdaIntegration(function, proxy=False, integration_responses=[
-                api_gw.IntegrationResponse(status_code='200',
-                                           response_parameters={
-                                               'method.response.header.Access-Control-Allow-Origin': "'*'"
-                                           })
-            ])
-            
-            counter=counter +1 
->>>>>>> 5a60060b7754185100c1219817723b00f5c931e3
 
 app = cdk.App()
 

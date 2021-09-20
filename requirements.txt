@@ -3,7 +3,4 @@ aws-cdk.aws_ecr==1.121.0
 aws-cdk.aws_lambda==1.121.0
 aws-cdk.aws_apigateway==1.121.0
 aws-cdk.aws_autoscaling==1.121.0
-<<<<<<< HEAD
 
-=======
->>>>>>> 5a60060b7754185100c1219817723b00f5c931e3
