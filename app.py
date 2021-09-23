@@ -103,7 +103,7 @@ class ServerlessHuggingFaceStack(cdk.Stack):
             tracing=lambda_.Tracing.ACTIVE
         )
 
-        alais2 = lambda_.Alias(self, "Alias",
+        alais2 = lambda_.Alias(self, "Function2Alias",
                                     provisioned_concurrent_executions=1,
                                     alias_name='live',
                                     version=function2.current_version)
