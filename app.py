@@ -95,7 +95,7 @@ class ServerlessHuggingFaceStack(cdk.Stack):
         )
 
         # SQS
-        order_queue=sqs.Queue(self,"orderQueue")
+        order_queue=sqs.Queue(self,"orderQueue",visibility_timeout=cdk.Duration.seconds(700))
 
         post_order_function = lambda_.Function(
             self,'testConncurrent' ,
