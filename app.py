@@ -109,7 +109,7 @@ class ServerlessHuggingFaceStack(cdk.Stack):
                                     version=function2.current_version)
 
 
-        as_ = alais.add_auto_scaling(max_capacity=5,min_capacity=1)
+        as_ = alais2.add_auto_scaling(max_capacity=5,min_capacity=1)
 
         as_.scale_on_utilization(utilization_target=0.2)
 
