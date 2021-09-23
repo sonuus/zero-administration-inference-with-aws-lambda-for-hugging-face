@@ -11,7 +11,9 @@ from aws_cdk import (
     aws_efs as efs,
     aws_ec2 as ec2,
     core as cdk,
-    aws_autoscaling as autoscaling
+    aws_autoscaling as autoscaling,
+    aws_sqs as sqs,
+    aws_iam as iam
 )
 
 
@@ -91,7 +93,8 @@ class ServerlessHuggingFaceStack(cdk.Stack):
             }]
         )
 
-
+        # SQS
+        order_queue=sqs.Queue(self,"orderQueue")
 
         function2 = lambda_.Function(
             self,'testConncurrent' ,
@@ -100,13 +103,25 @@ class ServerlessHuggingFaceStack(cdk.Stack):
             runtime=lambda_.Runtime.PYTHON_3_7,
             timeout=cdk.Duration.seconds(600),
             vpc=vpc,
-            tracing=lambda_.Tracing.ACTIVE
+            tracing=lambda_.Tracing.ACTIVE,
+            environment={
+                "ORDER_QUEUE_NAME": order_queue.queue_name}
         )
 
+        function2.add_to_role_policy(
+            iam.PolicyStatement(
+                effect=iam.Effect.ALLOW,
+                actions=[
+                    "sqs:SendMessage",
+                ],
+                resources=[order_queue.queue_arn],
+            )
+        )
         alais2 = lambda_.Alias(self, "Function2Alias",
                                     provisioned_concurrent_executions=1,
                                     alias_name='live',
                                     version=function2.current_version)
+
 
 
         as_ = alais2.add_auto_scaling(max_capacity=5,min_capacity=1)
@@ -140,6 +155,8 @@ class ServerlessHuggingFaceStack(cdk.Stack):
                 }
             }]
         )
+
+
 
 app = cdk.App()
 
