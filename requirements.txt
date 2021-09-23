@@ -3,4 +3,7 @@ aws-cdk.aws_ecr==1.121.0
 aws-cdk.aws_lambda==1.121.0
 aws-cdk.aws_apigateway==1.121.0
 aws-cdk.aws_autoscaling==1.121.0
+aws_cdk.aws_lambda_event_sources==1.121.0
+aws_cdk.aws_sqs==1.121.0
+aws_cdk.aws_iam==1.121.0
 

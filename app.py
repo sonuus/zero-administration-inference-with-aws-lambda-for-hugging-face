@@ -13,8 +13,9 @@ from aws_cdk import (
     core as cdk,
     aws_autoscaling as autoscaling,
     aws_sqs as sqs,
-    aws_iam as iam
+    aws_iam as iam,
 )
+from aws_cdk.aws_lambda_event_sources import SqsEventSource
 
 
 class ServerlessHuggingFaceStack(cdk.Stack):
@@ -96,19 +97,18 @@ class ServerlessHuggingFaceStack(cdk.Stack):
         # SQS
         order_queue=sqs.Queue(self,"orderQueue")
 
-        function2 = lambda_.Function(
+        post_order_function = lambda_.Function(
             self,'testConncurrent' ,
-            code=lambda_.Code.asset('./lambdas'),
+            code=lambda_.Code.asset('./order_post'),
             handler='app.handler',
             runtime=lambda_.Runtime.PYTHON_3_7,
             timeout=cdk.Duration.seconds(600),
-            vpc=vpc,
             tracing=lambda_.Tracing.ACTIVE,
             environment={
                 "ORDER_QUEUE_NAME": order_queue.queue_name}
         )
 
-        function2.add_to_role_policy(
+        post_order_function.add_to_role_policy(
             iam.PolicyStatement(
                 effect=iam.Effect.ALLOW,
                 actions=[
@@ -120,7 +120,7 @@ class ServerlessHuggingFaceStack(cdk.Stack):
         alais2 = lambda_.Alias(self, "Function2Alias",
                                     provisioned_concurrent_executions=1,
                                     alias_name='live',
-                                    version=function2.current_version)
+                                    version=post_order_function.current_version)
 
 
 
@@ -129,9 +129,9 @@ class ServerlessHuggingFaceStack(cdk.Stack):
         as_.scale_on_utilization(utilization_target=0.2)
 
         example_entity2 = base_api.root.add_resource(
-            'example2',
+            'order',
             default_cors_preflight_options=api_gw.CorsOptions(
-                allow_methods=['GET', 'OPTIONS', 'POST'],
+                allow_methods=['OPTIONS', 'POST'],
                 allow_origins=api_gw.Cors.ALL_ORIGINS)
         )
 
@@ -155,6 +155,19 @@ class ServerlessHuggingFaceStack(cdk.Stack):
                 }
             }]
         )
+
+        process_order_function = lambda_.Function(
+            self,'processOrder' ,
+            code=lambda_.Code.asset('./order_process'),
+            handler='app.handler',
+            runtime=lambda_.Runtime.PYTHON_3_7,
+            timeout=cdk.Duration.seconds(600),
+            tracing=lambda_.Tracing.ACTIVE
+        )
+        process_order_function.add_event_source(SqsEventSource(order_queue,
+            batch_size=5,
+            max_batching_window=cdk.Duration.minutes(5)
+        ))
 
 
 

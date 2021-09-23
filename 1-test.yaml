@@ -3,15 +3,15 @@ config:
   phases:
     - duration: 5
       arrivalRate: 40
-#   processor: "loadTestFunction.js"          
+#   processor: "loadTestFunction.js"
   defaults:
     headers:
     #   Authorization: 'Bearer <<ENTER YOUR JWT TOKEN HERE>>'
 scenarios:
   - flow:
-    # - function: "generateRandomData"
+    - function: "generateRandomData"
     - post:
-        url: "/example"
+        url: "/order"
         json:
-          text: "I'm so happy!"
-    - log: "Sent POST request to / with {{ text }}"
+          order_num: "{{ order_num }}"
+    - log: "Sent POST request to / with {{ order_num }}"
