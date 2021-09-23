@@ -97,7 +97,7 @@ class ServerlessHuggingFaceStack(cdk.Stack):
             self,'testConncurrent' ,
             code=lambda_.Code.asset('./lambdas'),
             handler='app.handler',
-            runtime=lambda_.Runtime.Runtime.PYTHON_3_8,
+            runtime=lambda_.Runtime.PYTHON_3_7,
             timeout=cdk.Duration.seconds(600),
             vpc=vpc,
             tracing=lambda_.Tracing.ACTIVE
