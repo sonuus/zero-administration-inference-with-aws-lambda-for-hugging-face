@@ -95,7 +95,7 @@ class ServerlessHuggingFaceStack(cdk.Stack):
         )
 
         # SQS
-        order_queue=sqs.Queue(self,"orderQueue",visibility_timeout=cdk.Duration.seconds(700))
+        order_queue=sqs.Queue(self,"orderQueue",visibility_timeout=cdk.Duration.seconds(70))
 
         post_order_function = lambda_.Function(
             self,'testConncurrent' ,
@@ -161,12 +161,12 @@ class ServerlessHuggingFaceStack(cdk.Stack):
             code=lambda_.Code.asset('./order_process'),
             handler='app.handler',
             runtime=lambda_.Runtime.PYTHON_3_7,
-            timeout=cdk.Duration.seconds(600),
+            timeout=cdk.Duration.seconds(60),
             tracing=lambda_.Tracing.ACTIVE
         )
         process_order_function.add_event_source(SqsEventSource(order_queue,
-            batch_size=5,
-            max_batching_window=cdk.Duration.minutes(5)
+            batch_size=2,
+            max_batching_window=cdk.Duration.seconds(5)
         ))
 
 
