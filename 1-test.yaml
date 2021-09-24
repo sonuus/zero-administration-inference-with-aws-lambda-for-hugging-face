@@ -1,0 +1,17 @@
+config:
+  target: 'https://rpgfoomidb.execute-api.us-west-1.amazonaws.com/prod'
+  phases:
+    - duration: 5
+      arrivalRate: 40
+#   processor: "loadTestFunction.js"          
+  defaults:
+    headers:
+    #   Authorization: 'Bearer <<ENTER YOUR JWT TOKEN HERE>>'
+scenarios:
+  - flow:
+    # - function: "generateRandomData"
+    - post:
+        url: "/example"
+        json:
+          text: "I'm so happy!"
+    - log: "Sent POST request to / with {{ text }}"

@@ -31,83 +31,65 @@ class ServerlessHuggingFaceStack(cdk.Stack):
                                                owner_gid='1001', owner_uid='1001', permissions='750'),
                                            path="/export/models",
                                            posix_user=efs.PosixUser(gid="1001", uid="1001"))
-
+        #Base API     
         base_api = api_gw.RestApi(self, 'ApiGatewayWithCors',
                                   rest_api_name='ApiGatewayWithCors')
+                                  
         example_entity = base_api.root.add_resource(
             'example',
             default_cors_preflight_options=api_gw.CorsOptions(
                 allow_methods=['GET', 'OPTIONS', 'POST'],
                 allow_origins=api_gw.Cors.ALL_ORIGINS)
         )
+        
+        # Lambda Function from docker image
+        function = lambda_.DockerImageFunction(
+            self,'sentiment.py' ,
+            code=lambda_.DockerImageCode.from_image_asset('inference', cmd=["sentiment.handler"]),
+            memory_size=8096,
+            timeout=cdk.Duration.seconds(600),
+            vpc=vpc,
+            tracing=lambda_.Tracing.ACTIVE,
+            filesystem=lambda_.FileSystem.from_efs_access_point(
+                access_point, '/mnt/hf_models_cache'),
+            environment={
+                "TRANSFORMERS_CACHE": "/mnt/hf_models_cache"}
+        )
 
-        # %%
-        # iterates through the Python files in the docker directory
-        docker_folder = os.path.dirname(
-            os.path.realpath(__file__)) + "/inference"
-        pathlist = Path(docker_folder).rglob('*.py')
-        counter=1
-        for path in pathlist:
-            base = os.path.basename(path)
-            filename = os.path.splitext(base)[0]
-            # Lambda Function from docker image
-            function = lambda_.DockerImageFunction(
-                self, filename,
-                code=lambda_.DockerImageCode.from_image_asset(docker_folder,
-                                                              cmd=[
-                                                                  filename+".handler"]
-                                                              ),
-                memory_size=8096,
-                timeout=cdk.Duration.seconds(600),
-                vpc=vpc,
-                filesystem=lambda_.FileSystem.from_efs_access_point(
-                    access_point, '/mnt/hf_models_cache'),
-                environment={
-                    "TRANSFORMERS_CACHE": "/mnt/hf_models_cache"}
-            )
+        
+        alais = lambda_.Alias(self, "Alias", 
+                                    provisioned_concurrent_executions=1,
+                                    alias_name='live', 
+                                    version=function.current_version)
+                                
+                                
+        as_ = alais.add_auto_scaling(max_capacity=10,min_capacity=1)
+        
+        as_.scale_on_utilization(utilization_target=0.4)
+            
+        # as_.scale_on_schedule("ScaleUpInTheMorning", schedule=autoscaling.Schedule.cron(
+        #     hour="8", minute="0"), min_capacity=2)
 
-            # function.current_version.add_alias(
-            #     "live", provisioned_concurrent_executions=2)
-            # version = function.add_version("1", "", f"integ-test")
+        example_entity_lambda_integration = api_gw.LambdaIntegration(
+            alais,
+            proxy=False,
+            integration_responses=[{
+                        'statusCode': '200',
+                        'responseParameters': {
+                            'method.response.header.Access-Control-Allow-Origin': "'*'",
+                        }
+                    }]
+                )
 
-            alais = lambda_.Alias(self, "Alias", provisioned_concurrent_executions=2,
-                                    alias_name='live', version=function.current_version)
-            as_ = alais.add_auto_scaling(max_capacity=5)
-            as_.scale_on_utilization(utilization_target=0.5)
-            # as_.scale_on_schedule("ScaleUpInTheMorning", schedule=autoscaling.Schedule.cron(
-            #     hour="8", minute="0"), min_capacity=2)
-
-            example_entity_lambda_integration = api_gw.LambdaIntegration(
-                alais,
-                proxy=False,
-                integration_responses=[{
-                            'statusCode': '200',
-                            'responseParameters': {
-                                'method.response.header.Access-Control-Allow-Origin': "'*'",
-                            }
-                        }]
-                    )
-
-            example_entity.add_method(
-                'ANY', example_entity_lambda_integration,
-                method_responses=[{
-                    'statusCode': '200',
-                    'responseParameters': {
-                        'method.response.header.Access-Control-Allow-Origin': True,
-                    }
-                }]
-            )
-
-            # adds method for the function
-            # lambda_integration = api_gw.LambdaIntegration(function, proxy=False, integration_responses=[
-            #     api_gw.IntegrationResponse(status_code='200',
-            #                                response_parameters={
-            #                                    'method.response.header.Access-Control-Allow-Origin': "'*'"
-            #                                })
-            # ])
-
-            break
-
+        example_entity.add_method(
+            'ANY', example_entity_lambda_integration,
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Access-Control-Allow-Origin': True,
+                }
+            }]
+        )
 
 app = cdk.App()
 

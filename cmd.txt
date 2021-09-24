@@ -1,0 +1,8 @@
+aws application-autoscaling describe-scaling-activities \
+--service-namespace lambda \
+--scalable-dimension lambda:function:ProvisionedConcurrency \
+--resource-id function:CreateOrder:prod
+
+artillery run ./1-test.yaml
+
+curl https://rpgfoomidb.execute-api.us-west-1.amazonaws.com/prod/example --data '{ "text":"happy" }'
